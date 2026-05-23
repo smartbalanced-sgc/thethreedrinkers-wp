@@ -18,9 +18,6 @@ Consult it before making any child theme override — templates, CSS, hooks,
 filters, and `functions.php`. **Never commit to or modify that repo under any
 circumstances.**
 
-At session start the parent is cloned to `../authentic-parent/` so it is
-available locally for file reads and searches.
-
 ## Project rules
 
 1. **Never edit the parent theme.** All overrides and customizations live in
