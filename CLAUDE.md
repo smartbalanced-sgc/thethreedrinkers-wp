@@ -29,9 +29,9 @@ push to `main`.
 6. **Keep `style.css` header intact.** The `Template:` line must keep
    pointing at the parent theme slug or WordPress will not recognize this
    as a child theme.
-7. **Enqueue, don't `@import`.** Load the parent stylesheet from
-   `functions.php` via `wp_enqueue_style`, not via `@import` in
-   `style.css`.
+7. **Never `@import` the parent stylesheet.** Only enqueue the parent
+   stylesheet from `functions.php` via `wp_enqueue_style` if the parent
+   theme does not already enqueue it itself (Authentic does).
 8. **Ask before destructive or shared-state actions** — force pushes,
    history rewrites, deleting branches, touching server-side files outside
    this repo, or anything that would affect the live site.
