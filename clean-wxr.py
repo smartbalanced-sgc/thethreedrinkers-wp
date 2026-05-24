@@ -70,6 +70,8 @@ AUTHOR_HEADER_REMOVE = set(AUTHOR_MERGES.keys()) | {"HelenaNicklin"}
 # Used to give the collective byline a proper-cased display name.
 AUTHOR_DISPLAY_OVERRIDES = {
     "TheThreeDrinkers": "The Three Drinkers",
+    # Adrian Smith goes by "Aidy" on all bylines — login stays as the email
+    "adrian@thethreedrinkers.com": "Aidy Smith",
 }
 
 # Category renames: from-nicename -> (new-nicename, new-name).
@@ -95,6 +97,13 @@ FORCE_DRAFT_SLUGS = {
 # - action='drop' removes the post and emits a 301 redirect to its category archive
 # - reassign_to='AidySmith' (or any login) overrides the post's dc:creator
 CURATION_FILE = "helena-curation.csv"
+
+# Map human-friendly names used in the curation CSV → real wp:author_login values
+# present in the WXR header. Without this, WP Importer would create phantom users
+# for any reassign_to value that doesn't exactly match an existing login.
+REASSIGN_ALIASES = {
+    "AidySmith": "adrian@thethreedrinkers.com",
+}
 
 # Category name normalizations: slug STAYS THE SAME, only the display name
 # changes. WP de-dupes terms by slug on import, so these auto-merge without
@@ -133,7 +142,8 @@ def load_curation(path):
             if action == "drop":
                 drop_slugs.add(slug)
             elif reassign:
-                reassign_map[slug] = reassign
+                # Resolve friendly alias to the real wp:author_login value
+                reassign_map[slug] = REASSIGN_ALIASES.get(reassign, reassign)
     return drop_slugs, reassign_map
 
 
