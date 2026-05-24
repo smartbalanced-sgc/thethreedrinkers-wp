@@ -9,3 +9,8 @@
  */
 
 /* Copy any classes from parent theme here. They will override the parent's version. */
+
+/* Squarespace imported content uses white-space:pre-wrap which causes layout breaks in WP */
+.sqs-html-content {
+	white-space: normal;
+}

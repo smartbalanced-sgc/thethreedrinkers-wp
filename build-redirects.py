@@ -166,6 +166,10 @@ def main():
     for pattern, target, reason in prefix_redirects:
         add(pattern, target, reason, regex=True)
 
+    # 3d. Known SS-only pages that have no WP equivalent — redirect to homepage
+    # /welcome was a SS welcome page (72 GSC clicks) not imported to WP
+    add("/welcome/", "/", "page-gone:welcome", clicks=72)
+
     # === Step 4: Write outputs ===
     fieldnames = ["source_url", "target_url", "code", "regex", "reason", "clicks"]
     with open(CSV_OUT, "w", newline="", encoding="utf-8") as f:
