@@ -54,15 +54,23 @@ AUTHOR_MERGES = {
     "helena@thethreedrinkers.com": "HelenaNicklin",
 }
 
-# Category renames/merges:  (from-nicename → to-nicename, to-name)
-CATEGORY_FIXES = {
-    "whisky":            ("whisky-cat",          "Whisky"),    # collapses lowercase variant
-    "scotch":            ("scotch-cat",          "Scotch"),
-    "rye":               ("rye-cat",             "Rye"),
-    "new-york":          ("new-york-cat",        "New York"),
-    "gear-and-gadgets":  ("gear-gadgets",        "Gear & Gadgets"),
-    "isaly":             ("islay",               "Islay"),
-    "sinagpore":         ("singapore",           "Singapore"),
+# Category renames: from-nicename -> (new-nicename, new-name).
+# Use this when the slug actually changes (different URL).
+# Each one will produce a 301 redirect entry in redirects-needed.csv.
+CATEGORY_RENAMES = {
+    "isaly":            ("islay",         "Islay"),         # typo fix
+    "sinagpore":        ("singapore",     "Singapore"),     # typo fix
+    "gear-and-gadgets": ("gear-gadgets",  "Gear & Gadgets"),# merge into ampersand variant
+}
+
+# Category name normalizations: slug STAYS THE SAME, only the display name
+# changes. WP de-dupes terms by slug on import, so these auto-merge without
+# any URL change. No redirect needed.
+CATEGORY_NAME_NORMALIZE = {
+    "whisky":   "Whisky",      # collapse 'whisky' (45 posts) into 'Whisky' (257 posts)
+    "scotch":   "Scotch",
+    "rye":      "Rye",
+    "new-york": "New York",
 }
 
 
@@ -129,15 +137,23 @@ def main():
         xml = f.read()
     log(report, f"  {len(xml):,} bytes\n")
 
-    # === Phase 1: Count tag usage in posts ===
-    # Find all post_tag references inside post items (not attachments)
+    # === Phase 1: Count tag usage + find canonical name per tag ===
+    # For each tag slug, also track which DISPLAY NAME is used most often
+    # so we can normalize inconsistent capitalisation.
     tag_usage = Counter()
-    # We do a simplified pass: capture every post_tag reference in any item;
-    # final filtering will be done per-item later.
-    for nicename in re.findall(
-        r'<category domain="post_tag" nicename="([^"]+)"', xml
+    tag_name_freq = defaultdict(Counter)  # slug -> Counter of names
+    for slug, name in re.findall(
+        r'<category domain="post_tag" nicename="([^"]+)"><!\[CDATA\[([^\]]+)\]\]></category>',
+        xml
     ):
-        tag_usage[nicename] += 1
+        tag_usage[slug] += 1
+        tag_name_freq[slug][name] += 1
+    # Canonical name per tag = most-frequent variant
+    tag_canonical_name = {slug: names.most_common(1)[0][0]
+                          for slug, names in tag_name_freq.items()}
+    multi_variant = sum(1 for names in tag_name_freq.values() if len(names) > 1)
+    log(report, f"Tag display-name variants normalized: {multi_variant} slugs had "
+                f"multiple case/spelling variants; using the most-frequent for each\n")
 
     # === Phase 2: Load GSC traffic ===
     gsc = load_gsc_tag_clicks(GSC_FILE, set(tag_usage.keys()))
@@ -209,23 +225,35 @@ def main():
                     "reason": reason,
                 })
 
-        # --- Tag filtering ---
-        # Remove <category domain="post_tag"> entries whose nicename isn't in keep_tags
+        # --- Tag filtering + display-name normalization ---
+        # Remove tags not in keep_tags; for kept tags, force the canonical (most-frequent) name.
         def repl_tag(m):
             nicename = m.group(1)
-            return m.group(0) if nicename in keep_tags else ""
+            if nicename not in keep_tags:
+                return ""
+            canonical = tag_canonical_name.get(nicename, m.group(2))
+            return f'<category domain="post_tag" nicename="{nicename}"><![CDATA[{canonical}]]></category>'
         item = re.sub(
-            r'<category domain="post_tag" nicename="([^"]+)"><!\[CDATA\[[^\]]+\]\]></category>\s*',
+            r'<category domain="post_tag" nicename="([^"]+)"><!\[CDATA\[([^\]]+)\]\]></category>\s*',
             repl_tag, item
         )
 
-        # --- Category renames/merges ---
-        for from_slug, (to_slug, to_name) in CATEGORY_FIXES.items():
+        # --- Category renames (slug + name change, redirect needed) ---
+        for from_slug, (to_slug, to_name) in CATEGORY_RENAMES.items():
             pat = re.compile(
                 rf'<category domain="category" nicename="{re.escape(from_slug)}"><!\[CDATA\[[^\]]+\]\]></category>'
             )
             replacement = f'<category domain="category" nicename="{to_slug}"><![CDATA[{to_name}]]></category>'
             item = pat.sub(replacement, item)
+
+        # --- Category name normalizations (slug stays same; only the display name is rewritten) ---
+        for slug, canonical_name in CATEGORY_NAME_NORMALIZE.items():
+            pat = re.compile(
+                rf'<category domain="category" nicename="{re.escape(slug)}"><!\[CDATA\[([^\]]+)\]\]></category>'
+            )
+            def _norm(m, slug=slug, canonical_name=canonical_name):
+                return f'<category domain="category" nicename="{slug}"><![CDATA[{canonical_name}]]></category>'
+            item = pat.sub(_norm, item)
 
         # --- Author merges ---
         creator_m = re.search(r"<dc:creator>([^<]+)</dc:creator>", item)
@@ -252,12 +280,24 @@ def main():
         f.write("\n  " + footer)
     log(report, f"\nWrote {WXR_OUT}\n")
 
+    # Add category rename redirects (full URL pattern this time, not just slug)
+    category_redirects = []
+    for from_slug, (to_slug, to_name) in CATEGORY_RENAMES.items():
+        category_redirects.append({
+            "old_slug": f"/magazine-content/category/{from_slug}",
+            "new_slug": f"/magazine-content/category/{to_slug}",
+            "reason":   f"category-rename:{from_slug}->{to_slug} ({to_name})",
+        })
+
     # === Write redirect map ===
     with open(REDIRECT, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["old_slug", "new_slug", "reason"])
         w.writeheader()
         w.writerows(redirects_needed)
-    log(report, f"Wrote {REDIRECT} with {len(redirects_needed)} slug-change redirects")
+        w.writerows(category_redirects)
+    log(report, f"Wrote {REDIRECT} with {len(redirects_needed)} slug-change "
+                f"+ {len(category_redirects)} category-rename redirects "
+                f"= {len(redirects_needed) + len(category_redirects)} total")
 
     # === Write report ===
     with open(REPORT, "w", encoding="utf-8") as f:
