@@ -3,13 +3,19 @@
 Clean the Squarespace WXR export for safe import into WordPress.
 
 Operations:
-  1. Drop attachment items (we sideload with Auto Upload Images post-import).
+  1. Keep attachment items (WP Importer downloads them so _thumbnail_id refs resolve).
+     Note: post-import, also run Auto Upload Images plugin for any inline imagery
+     in post content not registered as attachments.
   2. Drop draft / pending posts (per user decision).
   3. Build "keep" set for tags from GSC traffic + WXR usage; remove all
      other tag references from posts.
   4. Fix malformed article slugs (leading dash, date-pathed).
-  5. Merge duplicate author accounts (Adrian, Helena).
-  6. Normalize duplicate / typo'd categories.
+  5. Detect slug collisions and warn before import.
+  6. Merge duplicate author accounts (Helena's email login into HelenaNicklin).
+  7. Strip orphaned author blocks from WXR header (no phantom user accounts).
+  8. Override author display names (e.g., TheThreeDrinkers -> The Three Drinkers).
+  9. Normalize duplicate / typo'd categories with full 301 redirect map.
+ 10. Normalize inconsistent tag display names (most-frequent + capital tiebreaker).
 
 Inputs (in same folder):
   SquarespaceWordpressExport05232026.xml
@@ -17,8 +23,8 @@ Inputs (in same folder):
 
 Output:
   SquarespaceWordpressExport-cleaned.xml    (ready for WP Importer)
-  cleanup-report.txt                        (audit log of all changes)
-  redirects-needed.csv                      (list of slug changes needing 301s)
+  cleanup-report.txt                        (audit log of all changes including collision warnings)
+  redirects-needed.csv                      (slug + category-rename redirects)
 """
 import csv, re, sys, os, unicodedata
 from collections import Counter, defaultdict
@@ -45,13 +51,23 @@ REDIRECT = "redirects-needed.csv"
 
 TAG_KEEP_MIN_USES = 3                # keep tags used >= 3 times even without GSC clicks
 KEEP_DRAFTS       = False
-KEEP_ATTACHMENTS  = False
+KEEP_ATTACHMENTS  = True             # AUDIT FIX: keep attachments so _thumbnail_id refs resolve
 
 # Author merge map: (dc:creator value → canonical wp:author_login that exists in WXR header)
 # Adrian only has ONE account in the WXR (login = his email) so no merge needed for him.
 # Helena has two accounts -> we collapse her email login into her HelenaNicklin account.
 AUTHOR_MERGES = {
     "helena@thethreedrinkers.com": "HelenaNicklin",
+}
+
+# Author logins to strip from the WXR header entirely (the source side of a merge).
+# Without this, WP Importer creates a phantom user account with 0 posts.
+AUTHOR_HEADER_REMOVE = set(AUTHOR_MERGES.keys())
+
+# Author display-name overrides applied to <wp:author> blocks in the header.
+# Used to give the collective byline a proper-cased display name.
+AUTHOR_DISPLAY_OVERRIDES = {
+    "TheThreeDrinkers": "The Three Drinkers",
 }
 
 # Category renames: from-nicename -> (new-nicename, new-name).
@@ -148,8 +164,20 @@ def main():
     ):
         tag_usage[slug] += 1
         tag_name_freq[slug][name] += 1
-    # Canonical name per tag = most-frequent variant
-    tag_canonical_name = {slug: names.most_common(1)[0][0]
+    # Canonical name per tag = most-frequent variant, with a capitalization tiebreaker:
+    # on ties, prefer the variant starting with a capital letter (better display).
+    def pick_canonical(names_counter):
+        ordered = names_counter.most_common()
+        top_count = ordered[0][1]
+        tied = [n for n, c in ordered if c == top_count]
+        if len(tied) == 1:
+            return tied[0]
+        # Prefer first variant that starts with a capital letter
+        for n in tied:
+            if n and n[0].isupper():
+                return n
+        return tied[0]
+    tag_canonical_name = {slug: pick_canonical(names)
                           for slug, names in tag_name_freq.items()}
     multi_variant = sum(1 for names in tag_name_freq.values() if len(names) > 1)
     log(report, f"Tag display-name variants normalized: {multi_variant} slugs had "
@@ -186,11 +214,52 @@ def main():
     items = re.findall(r'<item>.*?</item>', xml, re.DOTALL)
     log(report, f"Items found: {len(items)}\n")
 
-    # === Author merges in header ===
+    # === Header cleanup: strip merged-source <wp:author> blocks; rewrite display names ===
     cleaned_header = header
-    for src, dst in AUTHOR_MERGES.items():
-        # We just leave both authors in the export; reassignments happen via dc:creator below
-        pass
+    for login in AUTHOR_HEADER_REMOVE:
+        pat = re.compile(
+            rf'\s*<wp:author>\s*(?:(?!</wp:author>).)*?<wp:author_login>{re.escape(login)}</wp:author_login>.*?</wp:author>\s*',
+            re.DOTALL
+        )
+        cleaned_header, n = pat.subn("\n    ", cleaned_header)
+        if n > 0:
+            log(report, f"Stripped {n} orphaned <wp:author> block(s) for login={login!r}")
+    for login, new_display in AUTHOR_DISPLAY_OVERRIDES.items():
+        pat = re.compile(
+            rf'(<wp:author>\s*(?:(?!</wp:author>).)*?<wp:author_login>{re.escape(login)}</wp:author_login>(?:(?!</wp:author>).)*?<wp:author_display_name>)<!\[CDATA\[[^\]]*\]\]>',
+            re.DOTALL
+        )
+        cleaned_header, n = pat.subn(rf'\g<1><![CDATA[{new_display}]]>', cleaned_header)
+        if n > 0:
+            log(report, f"Renamed display name for login={login!r} -> {new_display!r}")
+
+    # === Pre-pass: detect slug collisions BEFORE we write anything ===
+    # Build map of {final_slug: [(post_id, original_slug, status)]} so we can warn
+    # when fix_slug() would collapse two different posts to the same slug.
+    slug_universe = defaultdict(list)
+    for it in items:
+        ptype_m = re.search(r"<wp:post_type>([^<]+)", it)
+        status_m = re.search(r"<wp:status>([^<]+)", it)
+        slug_m = re.search(r"<wp:post_name>([^<]*)</wp:post_name>", it)
+        post_id_m = re.search(r"<wp:post_id>([^<]+)", it)
+        if not (ptype_m and status_m and slug_m): continue
+        ptype = ptype_m.group(1).strip()
+        status = status_m.group(1).strip()
+        if ptype != "post": continue
+        if status not in ("publish",): continue
+        original = slug_m.group(1)
+        fixed, _ = fix_slug(original)
+        slug_universe[fixed].append((post_id_m.group(1) if post_id_m else "?",
+                                      original, status))
+    collisions = {s: v for s, v in slug_universe.items() if len(v) > 1}
+    if collisions:
+        log(report, f"\n⚠️  SLUG COLLISION WARNING: {len(collisions)} slugs collide after normalization:")
+        for slug, hits in collisions.items():
+            log(report, f"   '{slug}' would be shared by:")
+            for pid, orig, st in hits:
+                log(report, f"     post_id={pid}  original_slug={orig!r}  status={st}")
+        log(report, "   → WP Importer will append -2/-3/... suffixes silently.")
+        log(report, "   → Resolve manually in WXR before importing, or accept the suffixing.\n")
 
     kept_items, dropped_items = [], Counter()
     redirects_needed = []

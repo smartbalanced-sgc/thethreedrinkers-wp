@@ -102,24 +102,49 @@ def parse_gsc(path):
     return out
 
 
+def _meta_content(soup, **attrs):
+    """Find <meta> with given attrs and return its content, or empty string."""
+    tag = soup.find("meta", attrs=attrs) if soup else None
+    return tag["content"].strip() if tag and tag.get("content") else ""
+
+
 def extract_meta(url):
     try:
         r = requests.get(url, timeout=20, headers={"User-Agent": UA})
         soup = BeautifulSoup(r.text, "html.parser") if r.text else None
         title = soup.title.string.strip() if soup and soup.title and soup.title.string else ""
-        desc, h1 = "", ""
+        desc = h1 = canonical = ""
+        og_title = og_desc = og_image = og_type = ""
+        tw_card = tw_title = tw_image = ""
         if soup:
-            d = soup.find("meta", attrs={"name": re.compile("^description$", re.I)})
-            desc = d["content"].strip() if d and d.get("content") else ""
-            # Squarespace often puts OG description if no meta description
+            desc = _meta_content(soup, name=re.compile("^description$", re.I))
             if not desc:
-                og = soup.find("meta", attrs={"property": re.compile("^og:description$", re.I)})
-                desc = og["content"].strip() if og and og.get("content") else ""
+                desc = _meta_content(soup, property=re.compile("^og:description$", re.I))
+            link_can = soup.find("link", attrs={"rel": re.compile("^canonical$", re.I)})
+            canonical = link_can["href"].strip() if link_can and link_can.get("href") else ""
+            og_title = _meta_content(soup, property=re.compile("^og:title$", re.I))
+            og_desc  = _meta_content(soup, property=re.compile("^og:description$", re.I))
+            og_image = _meta_content(soup, property=re.compile("^og:image$", re.I))
+            og_type  = _meta_content(soup, property=re.compile("^og:type$", re.I))
+            tw_card  = _meta_content(soup, name=re.compile("^twitter:card$", re.I))
+            tw_title = _meta_content(soup, name=re.compile("^twitter:title$", re.I))
+            tw_image = _meta_content(soup, name=re.compile("^twitter:image$", re.I))
             h_tag = soup.find("h1")
             h1 = h_tag.get_text(strip=True) if h_tag else ""
-        return title, desc, h1, str(r.status_code), len(r.content)
+        return {
+            "title": title, "desc": desc, "h1": h1,
+            "canonical": canonical,
+            "og_title": og_title, "og_desc": og_desc, "og_image": og_image, "og_type": og_type,
+            "tw_card": tw_card, "tw_title": tw_title, "tw_image": tw_image,
+            "status": str(r.status_code), "size": len(r.content),
+        }
     except Exception as e:
-        return "", "", "", f"ERROR: {e}", 0
+        return {
+            "title": "", "desc": "", "h1": "",
+            "canonical": "", "og_title": "", "og_desc": "", "og_image": "", "og_type": "",
+            "tw_card": "", "tw_title": "", "tw_image": "",
+            "status": f"ERROR: {e}", "size": 0,
+        }
 
 
 def main():
@@ -160,13 +185,18 @@ def main():
         writer = csv.writer(f)
         writer.writerow(["url", "url_type", "slug", "post_title",
                          "seo_title", "meta_description", "h1",
+                         "canonical", "og_title", "og_description", "og_image", "og_type",
+                         "twitter_card", "twitter_title", "twitter_image",
                          "http_status", "byte_size", "gsc_clicks", "source"])
         for i, r in enumerate(rows, 1):
             tag = f"[{i}/{len(rows)}] ({r['url_type']:8s}) clicks={r['gsc_clicks']:>5}"
             print(f"{tag}  {r['url']}", flush=True)
-            seo_title, meta_desc, h1, status, size = extract_meta(r["url"])
+            m = extract_meta(r["url"])
             writer.writerow([r["url"], r["url_type"], r["slug"], r["post_title"],
-                             seo_title, meta_desc, h1, status, size,
+                             m["title"], m["desc"], m["h1"],
+                             m["canonical"], m["og_title"], m["og_desc"], m["og_image"], m["og_type"],
+                             m["tw_card"], m["tw_title"], m["tw_image"],
+                             m["status"], m["size"],
                              r["gsc_clicks"], r["source"]])
             time.sleep(DELAY_SEC)
 
