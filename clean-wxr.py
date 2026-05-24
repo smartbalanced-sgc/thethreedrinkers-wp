@@ -79,6 +79,15 @@ CATEGORY_RENAMES = {
     "gear-and-gadgets": ("gear-gadgets",  "Gear & Gadgets"),# merge into ampersand variant
 }
 
+# Page slugs to force to draft status on export.
+# aidy-helena-1/2/3 are SS-generated "Copy" duplicates of the real aidy-helena page.
+# Importing them as published would create duplicate content and canonical confusion.
+FORCE_DRAFT_SLUGS = {
+    "aidy-helena-1",
+    "aidy-helena-2",
+    "aidy-helena-3",
+}
+
 # Category name normalizations: slug STAYS THE SAME, only the display name
 # changes. WP de-dupes terms by slug on import, so these auto-merge without
 # any URL change. No redirect needed.
@@ -278,6 +287,11 @@ def main():
         if status in ("draft", "pending", "trash", "auto-draft") and not KEEP_DRAFTS:
             dropped_items[f"status:{status}"] += 1
             continue
+
+        # --- Force-draft slugs (SS "Copy" duplicates that must not publish) ---
+        slug_early_m = re.search(r"<wp:post_name>([^<]*)</wp:post_name>", item)
+        if slug_early_m and slug_early_m.group(1).strip() in FORCE_DRAFT_SLUGS:
+            item = re.sub(r"<wp:status>[^<]+</wp:status>", "<wp:status>draft</wp:status>", item)
 
         # --- Slug fix ---
         slug_m = re.search(r"<wp:post_name>([^<]*)</wp:post_name>", item)
