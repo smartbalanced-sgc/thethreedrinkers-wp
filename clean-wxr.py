@@ -62,9 +62,7 @@ AUTHOR_MERGES = {
 
 # Author logins to strip from the WXR header entirely (the source side of a merge).
 # Without this, WP Importer creates a phantom user account with 0 posts.
-# HelenaNicklin is also stripped because all her articles are either dropped or
-# reassigned per helena-curation.csv — she has zero posts on the new site.
-AUTHOR_HEADER_REMOVE = set(AUTHOR_MERGES.keys()) | {"HelenaNicklin"}
+AUTHOR_HEADER_REMOVE = set(AUTHOR_MERGES.keys())
 
 # Author display-name overrides applied to <wp:author> blocks in the header.
 # Used to give the collective byline a proper-cased display name.
@@ -103,6 +101,13 @@ CURATION_FILE = "helena-curation.csv"
 # for any reassign_to value that doesn't exactly match an existing login.
 REASSIGN_ALIASES = {
     "AidySmith": "adrian@thethreedrinkers.com",
+}
+
+# One-off authorship reassignments for articles whose inline byline disagrees with
+# the dc:creator (e.g. body says "Words by Helena Nicklin" but post is attributed
+# to someone else in the WXR). Applied in addition to the curation CSV.
+MANUAL_REASSIGNS = {
+    "sake-beginners-guide": "HelenaNicklin",  # body byline credits Helena
 }
 
 # Category name normalizations: slug STAYS THE SAME, only the display name
@@ -144,6 +149,9 @@ def load_curation(path):
             elif reassign:
                 # Resolve friendly alias to the real wp:author_login value
                 reassign_map[slug] = REASSIGN_ALIASES.get(reassign, reassign)
+    # Layer in manual one-off reassignments (apply on top of CSV-based ones)
+    for slug, login in MANUAL_REASSIGNS.items():
+        reassign_map[slug] = REASSIGN_ALIASES.get(login, login)
     return drop_slugs, reassign_map
 
 
