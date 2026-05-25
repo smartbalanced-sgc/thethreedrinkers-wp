@@ -451,10 +451,19 @@ def main():
         log(report, f"  {k}: {v}")
 
     # === Write output ===
+    # Strip XML 1.0 control characters that the SS export sometimes leaves in
+    # post content (e.g. lone \x03 bytes). These crash strict XML parsers and
+    # cause WP Importer to silently fail on the containing item.
+    # Allowed by XML 1.0: \t (0x09), \n (0x0A), \r (0x0D); 0x20+.
+    invalid_xml_chars = re.compile(r'[\x00-\x08\x0B\x0C\x0E-\x1F]')
+    body = invalid_xml_chars.sub('', "\n    ".join(kept_items))
+    cleaned_header_safe = invalid_xml_chars.sub('', cleaned_header)
+    footer_safe = invalid_xml_chars.sub('', footer)
+
     with open(WXR_OUT, "w", encoding="utf-8") as f:
-        f.write(cleaned_header)
-        f.write("\n    ".join(kept_items))
-        f.write("\n  " + footer)
+        f.write(cleaned_header_safe)
+        f.write(body)
+        f.write("\n  " + footer_safe)
     log(report, f"\nWrote {WXR_OUT}\n")
 
     # Add category rename redirects (full URL pattern this time, not just slug)
