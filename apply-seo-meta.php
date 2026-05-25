@@ -1,9 +1,9 @@
 <?php
 /**
- * WP-CLI eval-file script — apply SEO meta to all posts and terms post-import.
+ * WP-CLI eval-file script — apply SEO meta to all posts, pages, and terms post-import.
  *
  * Reads three CSVs and writes Rank Math meta:
- *   1. descriptions-final.csv   — new/truncated meta descriptions (articles + tags)
+ *   1. descriptions-final.csv   — new/truncated meta descriptions (articles + tags + pages)
  *   2. seo-meta-augmented.csv   — SEO titles, OG data, canonicals (articles + tags)
  *
  * Rank Math meta keys confirmed from source (class-singular.php, class-post-variables.php):
@@ -53,6 +53,18 @@ function slug_to_post_id( $slug ) {
 	);
 }
 
+function slug_to_page_id( $slug ) {
+	global $wpdb;
+	return (int) $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts}
+			 WHERE post_name = %s AND post_type = 'page' AND post_status = 'publish'
+			 LIMIT 1",
+			$slug
+		)
+	);
+}
+
 function tag_name_to_term( $tag_name ) {
 	// Try exact slug match first
 	$slug = sanitize_title( $tag_name );
@@ -62,9 +74,24 @@ function tag_name_to_term( $tag_name ) {
 	return get_term_by( 'name', $tag_name, 'post_tag' );
 }
 
-// Strip the SS " — The Three Drinkers" suffix from titles (WP site title handles it)
-function clean_title( $title ) {
-	return trim( preg_replace( '/ [—–-]+ The Three Drinkers\s*$/u', '', $title ) );
+// Strip the SS " — The Three Drinkers" suffix from titles (WP site title handles it).
+// Handles: double suffix, HTML tags, truncated mid-word variants.
+// Manual overrides for titles corrupted at source (truncated before full suffix).
+const TITLE_OVERRIDES = [
+	'best-whisky-for-cocktails-macallan' => 'Macallan Mixology: Three Easy Classic Cocktails',
+];
+
+function clean_title( $title, $slug = '' ) {
+	// Apply manual override for known corrupted titles
+	if ( $slug && isset( TITLE_OVERRIDES[ $slug ] ) ) {
+		return TITLE_OVERRIDES[ $slug ];
+	}
+	// Strip any HTML tags (e.g. <br/> literals that leaked from SS)
+	$title = wp_strip_all_tags( $title );
+	// Remove every occurrence of the site-name suffix (greedy from first match)
+	// Handles em-dash, en-dash, hyphen variants and any double/triple repetition
+	$title = preg_replace( '/ [—–\-]+ The Three Drinkers.*$/u', '', $title );
+	return trim( $title );
 }
 
 // ─── Step 1: apply new descriptions ─────────────────────────────────────────
@@ -90,6 +117,12 @@ foreach ( $desc_rows as $row ) {
 		if ( ! $term ) { $desc_notfnd++; continue; }
 		update_term_meta( $term->term_id, 'rank_math_description', $new_desc );
 		$desc_ok++;
+
+	} elseif ( $row['type'] === 'page' ) {
+		$page_id = slug_to_page_id( $row['slug'] );
+		if ( ! $page_id ) { $desc_notfnd++; continue; }
+		update_post_meta( $page_id, 'rank_math_description', $new_desc );
+		$desc_ok++;
 	}
 }
 
@@ -110,8 +143,9 @@ foreach ( $meta_rows as $row ) {
 	if ( ! in_array( $url_type, [ 'article', 'tag' ], true ) ) { $meta_skip++; continue; }
 	if ( ( $row['http_status'] ?? '' ) !== '200' ) { $meta_skip++; continue; }
 
-	$seo_title   = clean_title( trim( $row['seo_title'] ?? '' ) );
-	$og_title    = clean_title( trim( $row['og_title'] ?? '' ) );
+	$row_slug    = trim( $row['slug'] ?? '' );
+	$seo_title   = clean_title( trim( $row['seo_title'] ?? '' ), $row_slug );
+	$og_title    = clean_title( trim( $row['og_title'] ?? '' ), $row_slug );
 	$canonical   = trim( $row['canonical'] ?? '' );
 
 	// Normalise canonical: convert SS domain to WP domain; skip if same as WP default
@@ -122,8 +156,7 @@ foreach ( $meta_rows as $row ) {
 	);
 
 	if ( $url_type === 'article' ) {
-		$slug    = trim( $row['slug'] ?? '' );
-		$post_id = $slug ? slug_to_post_id( $slug ) : 0;
+		$post_id = $row_slug ? slug_to_post_id( $row_slug ) : 0;
 		if ( ! $post_id ) { $meta_notfnd++; continue; }
 
 		if ( $seo_title ) {
@@ -135,7 +168,7 @@ foreach ( $meta_rows as $row ) {
 			update_post_meta( $post_id, 'rank_math_twitter_title', $og_title );
 		}
 		// Canonical only if it differs from the WP default (/<base>/<slug>/)
-		$expected = trailingslashit( $wp_home . '/magazine-content/' . $slug );
+		$expected = trailingslashit( $wp_home . '/magazine-content/' . $row_slug );
 		if ( $canonical && $canonical !== $expected ) {
 			update_post_meta( $post_id, 'rank_math_canonical_url', $canonical );
 		}

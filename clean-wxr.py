@@ -68,6 +68,8 @@ AUTHOR_HEADER_REMOVE = set(AUTHOR_MERGES.keys())
 # Used to give the collective byline a proper-cased display name.
 AUTHOR_DISPLAY_OVERRIDES = {
     "TheThreeDrinkers": "The Three Drinkers",
+    # Adrian Smith goes by "Aidy" on all bylines — login stays as the email
+    "adrian@thethreedrinkers.com": "Aidy Smith",
 }
 
 # Category renames: from-nicename -> (new-nicename, new-name).
@@ -77,6 +79,35 @@ CATEGORY_RENAMES = {
     "isaly":            ("islay",         "Islay"),         # typo fix
     "sinagpore":        ("singapore",     "Singapore"),     # typo fix
     "gear-and-gadgets": ("gear-gadgets",  "Gear & Gadgets"),# merge into ampersand variant
+}
+
+# Page slugs to force to draft status on export.
+# aidy-helena-1/2/3 are SS-generated "Copy" duplicates of the real aidy-helena page.
+# Importing them as published would create duplicate content and canonical confusion.
+FORCE_DRAFT_SLUGS = {
+    "aidy-helena-1",
+    "aidy-helena-2",
+    "aidy-helena-3",
+}
+
+# Per-post curation file: editorial decisions on which posts to drop and which
+# to reassign to a different author. Columns: slug, action, reassign_to.
+# - action='drop' removes the post and emits a 301 redirect to its category archive
+# - reassign_to='AidySmith' (or any login) overrides the post's dc:creator
+CURATION_FILE = "helena-curation.csv"
+
+# Map human-friendly names used in the curation CSV → real wp:author_login values
+# present in the WXR header. Without this, WP Importer would create phantom users
+# for any reassign_to value that doesn't exactly match an existing login.
+REASSIGN_ALIASES = {
+    "AidySmith": "adrian@thethreedrinkers.com",
+}
+
+# One-off authorship reassignments for articles whose inline byline disagrees with
+# the dc:creator (e.g. body says "Words by Helena Nicklin" but post is attributed
+# to someone else in the WXR). Applied in addition to the curation CSV.
+MANUAL_REASSIGNS = {
+    "sake-beginners-guide": "HelenaNicklin",  # body byline credits Helena
 }
 
 # Category name normalizations: slug STAYS THE SAME, only the display name
@@ -93,6 +124,35 @@ CATEGORY_NAME_NORMALIZE = {
 def log(report, msg):
     report.append(msg)
     print(msg)
+
+
+def load_curation(path):
+    """Load editorial decisions from helena-curation.csv (or similar).
+    Returns (drop_slugs, reassign_map) where:
+      drop_slugs = set of slugs to remove from import
+      reassign_map = {slug: new_dc_creator_value}
+    Missing file → returns empty structures (no curation applied).
+    """
+    drop_slugs = set()
+    reassign_map = {}
+    if not os.path.exists(path):
+        return drop_slugs, reassign_map
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            slug = (row.get("slug") or "").strip()
+            if not slug:
+                continue
+            action = (row.get("action") or "").strip().lower()
+            reassign = (row.get("reassign_to") or "").strip()
+            if action == "drop":
+                drop_slugs.add(slug)
+            elif reassign:
+                # Resolve friendly alias to the real wp:author_login value
+                reassign_map[slug] = REASSIGN_ALIASES.get(reassign, reassign)
+    # Layer in manual one-off reassignments (apply on top of CSV-based ones)
+    for slug, login in MANUAL_REASSIGNS.items():
+        reassign_map[slug] = REASSIGN_ALIASES.get(login, login)
+    return drop_slugs, reassign_map
 
 
 def load_gsc_tag_clicks(path, wxr_nicenames):
@@ -188,6 +248,11 @@ def main():
     log(report, f"GSC tag traffic loaded: {len(gsc)} tags with clicks "
                 f"(sum {sum(gsc.values()):,} clicks)\n")
 
+    # === Phase 2b: Load editorial curation decisions ===
+    drop_slugs, reassign_map = load_curation(CURATION_FILE)
+    log(report, f"Curation loaded from {CURATION_FILE}: "
+                f"{len(drop_slugs)} drops, {len(reassign_map)} reassignments\n")
+
     # === Phase 3: Build keep set ===
     keep_tags = set()
     for slug in gsc:
@@ -279,6 +344,11 @@ def main():
             dropped_items[f"status:{status}"] += 1
             continue
 
+        # --- Force-draft slugs (SS "Copy" duplicates that must not publish) ---
+        slug_early_m = re.search(r"<wp:post_name>([^<]*)</wp:post_name>", item)
+        if slug_early_m and slug_early_m.group(1).strip() in FORCE_DRAFT_SLUGS:
+            item = re.sub(r"<wp:status>[^<]+</wp:status>", "<wp:status>draft</wp:status>", item)
+
         # --- Slug fix ---
         slug_m = re.search(r"<wp:post_name>([^<]*)</wp:post_name>", item)
         if slug_m and slug_m.group(1):
@@ -293,6 +363,34 @@ def main():
                     "new_slug": new_slug,
                     "reason": reason,
                 })
+
+        # --- Curation: drop posts/pages marked for removal, emit redirect ---
+        # Runs AFTER slug fix so we match against the post-fix (canonical) slug,
+        # which is what the curation CSV was generated from.
+        slug_now = re.search(r"<wp:post_name>([^<]*)</wp:post_name>", item)
+        current_slug = slug_now.group(1).strip() if slug_now else ""
+        if current_slug and current_slug in drop_slugs and ptype in ("post", "page"):
+            # Find the first category to use as the redirect target (posts only)
+            cat_m = re.search(
+                r'<category domain="category" nicename="([^"]+)"',
+                item
+            )
+            if cat_m and ptype == "post":
+                cat_slug = cat_m.group(1).strip()
+                if cat_slug in CATEGORY_RENAMES:
+                    cat_slug = CATEGORY_RENAMES[cat_slug][0]
+                redirect_target = f"/magazine-content/category/{cat_slug}/"
+                reason = f"curated-drop:cat-{cat_slug}"
+            else:
+                redirect_target = "/"
+                reason = f"curated-drop:{ptype}-no-category"
+            redirects_needed.append({
+                "old_slug": f"/magazine-content/{current_slug}/",
+                "new_slug": redirect_target,
+                "reason":   reason,
+            })
+            dropped_items["curated-drop"] += 1
+            continue
 
         # --- Tag filtering + display-name normalization ---
         # Remove tags not in keep_tags; for kept tags, force the canonical (most-frequent) name.
@@ -334,6 +432,16 @@ def main():
                     f"<dc:creator>{creator}</dc:creator>",
                     f"<dc:creator>{new}</dc:creator>"
                 )
+
+        # --- Curation: reassign authorship for specific slugs ---
+        if current_slug and current_slug in reassign_map:
+            new_creator = reassign_map[current_slug]
+            item = re.sub(
+                r"<dc:creator>[^<]+</dc:creator>",
+                f"<dc:creator>{new_creator}</dc:creator>",
+                item,
+                count=1,
+            )
 
         kept_items.append(item)
 
