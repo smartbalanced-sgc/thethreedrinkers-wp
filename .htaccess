@@ -1,0 +1,21 @@
+# Deny direct HTTP access to migration build artifacts and WP-CLI scripts
+# that are deployed alongside the child theme files.
+#
+# These files exist in the repo for version control + reproducibility but
+# should NOT be served as static content. Only the actual theme assets
+# (style.css, functions.php, /js/, screenshot.png) are intentionally public.
+
+# Block migration build artifacts (Python tools, CSV data, docs)
+<FilesMatch "\.(py|csv|md)$">
+	Require all denied
+</FilesMatch>
+
+# Block WP-CLI scripts (intended to be copied to /tmp/ and run via wp eval-file)
+<FilesMatch "^apply-.*\.php$">
+	Require all denied
+</FilesMatch>
+
+# Block the WXR file if it ever ends up here
+<FilesMatch "\.xml$">
+	Require all denied
+</FilesMatch>
