@@ -33,3 +33,35 @@ add_action( 'wp_enqueue_scripts', 'csco_child_assets', 99 );
  * Add your custom code below this comment.
  */
 
+/**
+ * Initialise Owl Carousel on imported Squarespace .image-gallery-wrapper blocks.
+ *
+ * Only loads on singular posts that actually contain the wrapper, so 1,400+
+ * non-gallery posts pay zero cost. The parent theme enqueues owl-carousel and
+ * imagesloaded globally, so we declare them as deps to guarantee load order.
+ */
+function ttd_enqueue_image_gallery_carousel() {
+	if ( ! is_singular( 'post' ) ) {
+		return;
+	}
+
+	$post = get_post();
+	if ( ! $post || strpos( $post->post_content, 'image-gallery-wrapper' ) === false ) {
+		return;
+	}
+
+	$rel  = 'js/ttd-image-gallery.js';
+	$path = trailingslashit( get_stylesheet_directory() ) . $rel;
+	$url  = trailingslashit( get_stylesheet_directory_uri() ) . $rel;
+	$ver  = file_exists( $path ) ? filemtime( $path ) : wp_get_theme()->get( 'Version' );
+
+	wp_enqueue_script(
+		'ttd-image-gallery',
+		$url,
+		array( 'jquery', 'owl-carousel', 'imagesloaded' ),
+		$ver,
+		true
+	);
+}
+add_action( 'wp_enqueue_scripts', 'ttd_enqueue_image_gallery_carousel', 100 );
+

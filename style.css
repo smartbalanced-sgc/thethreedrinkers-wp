@@ -14,3 +14,24 @@
 .sqs-html-content {
 	white-space: normal;
 }
+
+/*
+ * Squarespace image gallery → Owl Carousel
+ *
+ * Imported SS posts have <div class="image-gallery-wrapper"><img/>...</div>.
+ * Our JS adds .owl-carousel and inits Owl. Hide the raw markup until Owl
+ * has loaded to avoid a flash of all images stacked vertically at full size.
+ */
+.image-gallery-wrapper {
+	visibility: hidden;
+}
+.image-gallery-wrapper.owl-loaded {
+	visibility: visible;
+}
+/* Constrain runaway portrait shots so mixed-aspect-ratio galleries behave */
+.ttd-image-gallery .ttd-gallery-slide img {
+	max-height: 70vh;
+	width: auto;
+	margin: 0 auto;
+	display: block;
+}
