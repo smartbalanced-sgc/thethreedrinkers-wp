@@ -106,11 +106,20 @@ function ttd_sideload_url( $url, $request_timeout ) {
 	// Strip query string when deriving filename (SS uses ?format=original)
 	$path     = wp_parse_url( $url, PHP_URL_PATH );
 	$basename = $path ? basename( $path ) : '';
-	if ( ! $basename || strpos( $basename, '.' ) === false ) {
-		// SS URLs sometimes have no clean filename — derive one
+
+	// Only accept the basename if it ends with a recognised image extension.
+	// SS URLs sometimes contain a dot mid-name (e.g. "...thethreedrinkers.com...")
+	// which our previous heuristic mistook for a file extension, causing WP to
+	// reject the upload as an unknown MIME type.
+	$valid_image_ext = '/\.(jpe?g|png|gif|webp|avif|svg)$/i';
+	if ( ! $basename || ! preg_match( $valid_image_ext, $basename ) ) {
+		// Derive a safe filename. SS exports are overwhelmingly JPG; the actual
+		// MIME type is verified by wp_handle_sideload() after download, so a
+		// .jpg suffix here is a safe default even if the file is something else
+		// (sideload will reject mismatches outright).
 		$basename = 'ttd-import-' . substr( md5( $url ), 0, 12 ) . '.jpg';
 	}
-	// Ensure basename doesn't contain unsafe chars
+	// Sanitize after extension detection so we don't strip the . from the ext
 	$basename = sanitize_file_name( $basename );
 
 	$tmp = download_url( $url, $request_timeout );
