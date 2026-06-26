@@ -51,20 +51,30 @@
 }
 
 /*
- * Hide the theme's featured-image hero on single posts that ALREADY start
- * with an imported SS gallery — otherwise the post shows the featured
- * image at the top followed by an identical (or near-identical) carousel
- * directly below, which looks like a duplicate.
+ * Hide the theme's featured-image hero on single posts whose body ALREADY
+ * starts with that same image — otherwise the post shows the featured image
+ * at the top followed by an identical (or near-identical) image directly
+ * below, which reads as a duplicate.
  *
  * Why we still set a featured image on these posts: WordPress widgets
  * (Featured Posts, Trending Posts, Recent Posts sidebar, category archives,
  * homepage hero, social/OG share image) all use _thumbnail_id. Without
  * a featured image, those locations render blank tiles. So the featured
  * image stays in the database — we just suppress its appearance on the
- * single-post view itself when the carousel makes it redundant.
+ * single-post view itself when the body's lead image makes it redundant.
  *
- * Uses CSS :has() — supported in every modern browser since early 2024.
+ * Two mechanisms, both hide section.post-media:
+ *   1. .ttd-hero-suppressed — a body class added by functions.php for posts
+ *      flagged by apply-hero-suppression.php (any post whose content starts
+ *      with an image, single lead image OR gallery/carousel). This is the
+ *      primary, reliable mechanism because PHP can actually parse where the
+ *      content begins.
+ *   2. :has( .image-gallery-wrapper ) — an automatic CSS-only fallback for
+ *      carousel posts, so they're handled even before the script runs (e.g.
+ *      a gallery post created later in the editor). Uses CSS :has(),
+ *      supported in every modern browser since early 2024.
  */
+.ttd-hero-suppressed section.post-media,
 .single-post article:has( .entry-content .image-gallery-wrapper ) > section.post-media,
 .single-post article:has( .post-content .image-gallery-wrapper ) > section.post-media {
 	display: none !important;

@@ -65,3 +65,30 @@ function ttd_enqueue_image_gallery_carousel() {
 }
 add_action( 'wp_enqueue_scripts', 'ttd_enqueue_image_gallery_carousel', 100 );
 
+/**
+ * Suppress the theme's featured-image hero on single posts whose body already
+ * starts with that same image.
+ *
+ * Background: imported Squarespace posts often begin with an image (a single
+ * lead image or a gallery/carousel). We still assign those posts a featured
+ * image so widgets, archives, the homepage and social/OG share cards have a
+ * thumbnail — but the theme renders the featured image as a large hero at the
+ * top of the single post, directly above the body's identical lead image,
+ * which reads as a duplicate.
+ *
+ * apply-hero-suppression.php scans posts and sets the _ttd_suppress_hero meta
+ * on every post whose content starts with an image. Here we turn that flag
+ * into a body class so style.css can hide section.post-media on just those
+ * posts. Posts that start with text keep their hero (no duplication there).
+ */
+function ttd_suppress_hero_body_class( $classes ) {
+	if ( is_singular( 'post' ) ) {
+		$post = get_post();
+		if ( $post && get_post_meta( $post->ID, '_ttd_suppress_hero', true ) ) {
+			$classes[] = 'ttd-hero-suppressed';
+		}
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'ttd_suppress_hero_body_class' );
+
