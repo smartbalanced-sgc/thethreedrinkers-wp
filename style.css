@@ -19,8 +19,17 @@
  * Squarespace image gallery → Owl Carousel
  *
  * Imported SS posts have <div class="image-gallery-wrapper"><img/>...</div>.
- * Our JS adds .owl-carousel and inits Owl. Hide the raw markup until Owl
- * has loaded to avoid a flash of all images stacked vertically at full size.
+ * Our JS (ttd-image-gallery.js) adds .owl-carousel and inits Owl. The arrow
+ * styling itself is set inline via JS — earlier attempts to style the arrows
+ * via this stylesheet were beaten by the parent theme's specificity even with
+ * !important. Only inline + !important from JS wins reliably.
+ *
+ * What's left here:
+ *   - Hide the raw markup until Owl loads (avoids a flash of stacked images)
+ *   - Cap image height for mixed-aspect-ratio galleries
+ *   - Position context (.ttd-image-gallery is the relative container so the
+ *     absolutely-positioned .owl-nav inside it positions correctly)
+ *   - Breathing room above the dots
  */
 .image-gallery-wrapper {
 	visibility: hidden;
@@ -28,92 +37,15 @@
 .image-gallery-wrapper.owl-loaded {
 	visibility: visible;
 }
-/* Constrain runaway portrait shots so mixed-aspect-ratio galleries behave */
+.ttd-image-gallery {
+	position: relative;
+}
 .ttd-image-gallery .ttd-gallery-slide img {
 	max-height: 70vh;
 	width: auto;
 	margin: 0 auto;
 	display: block;
 }
-
-/*
- * Visible left/right navigation arrows on the carousel
- *
- * Owl creates .owl-nav with .owl-prev / .owl-next buttons but the parent
- * theme styles them as hidden. We position them as overlay circles on the
- * left/right edges of the gallery and use ::before pseudo-elements for the
- * visible chevron so the screen-reader-text inside the button is preserved
- * for accessibility.
- */
-.ttd-image-gallery {
-	position: relative;
-}
-/*
- * Force visibility — the parent Authentic theme hides .owl-nav by default
- * (its own carousels use dots only). We boost specificity with both
- * .ttd-image-gallery AND .owl-carousel classes plus !important to override.
- */
-.ttd-image-gallery.owl-carousel .owl-nav,
-.image-gallery-wrapper.owl-loaded .owl-nav {
-	display: flex !important;
-	visibility: visible !important;
-	opacity: 1 !important;
-	position: absolute;
-	top: 50%;
-	left: 0;
-	right: 0;
-	transform: translateY( -50% );
-	pointer-events: none;
-	justify-content: space-between;
-	padding: 0 12px;
-	margin: 0;
-	z-index: 5;
-}
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev,
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-next {
-	display: flex !important;
-	visibility: visible !important;
-	opacity: 1 !important;
-	pointer-events: auto;
-	background: rgba( 0, 0, 0, 0.55 ) !important;
-	color: #fff !important;
-	border: 0 !important;
-	width: 44px;
-	height: 44px;
-	border-radius: 50%;
-	cursor: pointer;
-	align-items: center;
-	justify-content: center;
-	padding: 0;
-	margin: 0;
-	transition: background-color 0.15s ease;
-	box-shadow: none;
-}
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev:hover,
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-next:hover {
-	background: rgba( 0, 0, 0, 0.85 ) !important;
-}
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev::before,
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-next::before {
-	font-family: Arial, sans-serif;
-	font-size: 28px;
-	line-height: 1;
-	font-weight: 300;
-	display: block;
-}
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev::before {
-	content: "\2039"; /* ‹ */
-	margin-right: 2px;
-}
-.ttd-image-gallery.owl-carousel .owl-nav button.owl-next::before {
-	content: "\203A"; /* › */
-	margin-left: 2px;
-}
-.ttd-image-gallery.owl-carousel .owl-nav button.disabled {
-	opacity: 0.3 !important;
-	cursor: default;
-}
-/* Slight breathing room above the dots so they don't crowd the bottom of the image */
 .ttd-image-gallery .owl-dots {
 	margin-top: 12px;
 }

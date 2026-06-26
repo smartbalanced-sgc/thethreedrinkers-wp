@@ -70,12 +70,13 @@
 						';right:0 !important' +
 						';transform:translateY(-50%) !important' +
 						';justify-content:space-between !important' +
-						';padding:0 12px !important' +
+						';padding:0 24px !important' +
 						';margin:0 !important' +
 						';pointer-events:none !important' +
 						';z-index:10 !important' +
 						';width:auto !important' +
-						';height:auto !important';
+						';height:auto !important' +
+						';box-sizing:border-box !important';
 				}
 				$wrap.find( '.owl-nav button.owl-prev, .owl-nav button.owl-next' ).each( function () {
 					this.style.cssText +=
