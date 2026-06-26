@@ -82,3 +82,22 @@ improvements as separate follow-up work the user can approve.
 8. **Ask before destructive or shared-state actions** — force pushes,
    history rewrites, deleting branches, touching server-side files outside
    this repo, or anything that would affect the live site.
+
+## How to give the user SSH commands
+
+Hostinger's SSH idle timeout disconnects the user after ~2 minutes. Every
+time you hand the user a command block to run on the server, **start it
+with the SSH login and the `cd` into the WordPress install** so they can
+always paste a single block without first reconnecting and navigating
+manually. Template:
+
+```bash
+ssh -p 65002 u347149888@185.210.147.200
+# then once logged in:
+cd /home/u347149888/domains/ttd.bringit.ph/public_html
+<the actual command(s) you want them to run>
+```
+
+Never give them just the bare `wp …` command — always include the login
++ cd preamble, even if it seems redundant. They have asked for this
+explicitly.
