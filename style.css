@@ -52,25 +52,43 @@
 
 /*
  * Synced thumbnail strip below the main carousel (Squarespace-style UX).
- * Each thumbnail is clickable; the active one is highlighted. Owl handles
- * the strip-scrolling so 10+ image galleries don't crowd the layout.
+ * A plain horizontally-scrolling flex row (NOT an Owl carousel) — each
+ * thumbnail is a <button>, the active one is highlighted, and the strip
+ * scrolls horizontally when a gallery has more thumbs than fit on screen.
  */
 .ttd-gallery-thumbs {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 6px;
 	margin-top: 10px;
+	padding-bottom: 4px;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
 }
 .ttd-gallery-thumb {
+	flex: 0 0 auto;
+	width: 84px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
 	cursor: pointer;
 	opacity: 0.55;
 	transition: opacity 0.2s ease, box-shadow 0.2s ease;
 	overflow: hidden;
 	border-radius: 2px;
+	-webkit-appearance: none;
+	appearance: none;
 }
 .ttd-gallery-thumb img {
 	width: 100%;
-	height: 100%;
+	height: auto;
 	display: block;
 	aspect-ratio: 16 / 9;
 	object-fit: cover;
+	border-radius: 2px;
 }
 .ttd-gallery-thumb:hover {
 	opacity: 0.85;
@@ -78,6 +96,11 @@
 .ttd-gallery-thumb.active {
 	opacity: 1;
 	box-shadow: 0 0 0 2px currentColor;
+}
+@media ( min-width: 600px ) {
+	.ttd-gallery-thumb {
+		width: 96px;
+	}
 }
 
 /*

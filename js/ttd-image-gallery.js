@@ -135,41 +135,30 @@
 				} );
 
 				// ── Thumbnail strip ──────────────────────────────────────
-				// Build a synced thumbnail carousel below the main one (SS
-				// gallery UX). Clicking a thumb navigates the main carousel;
-				// the main carousel highlights the matching thumb as it
-				// changes slides.
+				// Build a synced thumbnail strip below the main carousel (SS
+				// gallery UX). Deliberately NOT an Owl carousel — a plain
+				// horizontally-scrolling flex row is far more reliable (no
+				// second Owl init, no zero-height .owl-item children, no
+				// cloned-slide index maths). Clicking a thumb navigates the
+				// main carousel; the main carousel highlights + scrolls the
+				// matching thumb into view as it changes slides.
 				var thumbCount = thumbData.length;
 				if ( thumbCount > 1 ) {
-					var thumbsHtml = '<div class="ttd-gallery-thumbs owl-carousel">';
+					var thumbsHtml = '<div class="ttd-gallery-thumbs">';
 					for ( var i = 0; i < thumbCount; i++ ) {
 						var safeAlt = thumbData[ i ].alt.replace( /"/g, '&quot;' );
 						thumbsHtml +=
-							'<div class="ttd-gallery-thumb" data-slide="' + i + '">' +
+							'<button type="button" class="ttd-gallery-thumb" data-slide="' + i + '"' +
+								( i === 0 ? ' aria-current="true"' : '' ) + '>' +
 								'<img src="' + thumbData[ i ].src + '" alt="' + safeAlt + '" loading="lazy">' +
-							'</div>';
+							'</button>';
 					}
 					thumbsHtml += '</div>';
 					var $thumbs = $( thumbsHtml );
 					$wrap.after( $thumbs );
 
-					$thumbs.owlCarousel( {
-						items: 8,
-						margin: 6,
-						dots: false,
-						nav: false,
-						mouseDrag: true,
-						touchDrag: true,
-						smartSpeed: 250,
-						responsive: {
-							0:   { items: 4 },
-							600: { items: 6 },
-							900: { items: 8 }
-						}
-					} );
-
 					// Mark first thumb active on init
-					$thumbs.find( '.ttd-gallery-thumb' ).first().addClass( 'active' );
+					$thumbs.children( '.ttd-gallery-thumb' ).first().addClass( 'active' );
 
 					// Clicking a thumb navigates the main carousel
 					$thumbs.on( 'click', '.ttd-gallery-thumb', function ( e ) {
@@ -184,17 +173,23 @@
 						var realIdx;
 						if ( e.relatedTarget && typeof e.relatedTarget.relative === 'function' ) {
 							realIdx = e.relatedTarget.relative( e.relatedTarget.current() );
-						} else {
+						} else if ( e.item && typeof e.item.index === 'number' ) {
 							realIdx = ( ( e.item.index % thumbCount ) + thumbCount ) % thumbCount;
 						}
 						if ( typeof realIdx !== 'number' || realIdx < 0 ) {
 							return;
 						}
-						$thumbs.find( '.ttd-gallery-thumb' )
+						var $active = $thumbs.children( '.ttd-gallery-thumb' )
 							.removeClass( 'active' )
+							.removeAttr( 'aria-current' )
 							.eq( realIdx )
-							.addClass( 'active' );
-						$thumbs.trigger( 'to.owl.carousel', [ realIdx, 250 ] );
+							.addClass( 'active' )
+							.attr( 'aria-current', 'true' );
+						// Scroll the active thumb into view within the strip
+						var thumbEl = $active.get( 0 );
+						if ( thumbEl && typeof thumbEl.scrollIntoView === 'function' ) {
+							thumbEl.scrollIntoView( { behavior: 'smooth', inline: 'center', block: 'nearest' } );
+						}
 					} );
 				}
 			} );
