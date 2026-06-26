@@ -48,57 +48,69 @@
 .ttd-image-gallery {
 	position: relative;
 }
-.ttd-image-gallery .owl-nav {
+/*
+ * Force visibility — the parent Authentic theme hides .owl-nav by default
+ * (its own carousels use dots only). We boost specificity with both
+ * .ttd-image-gallery AND .owl-carousel classes plus !important to override.
+ */
+.ttd-image-gallery.owl-carousel .owl-nav,
+.image-gallery-wrapper.owl-loaded .owl-nav {
+	display: flex !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 	position: absolute;
 	top: 50%;
 	left: 0;
 	right: 0;
-	transform: translateY(-50%);
+	transform: translateY( -50% );
 	pointer-events: none;
-	display: flex;
 	justify-content: space-between;
 	padding: 0 12px;
 	margin: 0;
-	z-index: 2;
+	z-index: 5;
 }
-.ttd-image-gallery .owl-nav button.owl-prev,
-.ttd-image-gallery .owl-nav button.owl-next {
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev,
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-next {
+	display: flex !important;
+	visibility: visible !important;
+	opacity: 1 !important;
 	pointer-events: auto;
-	background: rgba( 0, 0, 0, 0.55 );
-	color: #fff;
-	border: 0;
+	background: rgba( 0, 0, 0, 0.55 ) !important;
+	color: #fff !important;
+	border: 0 !important;
 	width: 44px;
 	height: 44px;
 	border-radius: 50%;
 	cursor: pointer;
-	display: flex;
 	align-items: center;
 	justify-content: center;
 	padding: 0;
+	margin: 0;
 	transition: background-color 0.15s ease;
+	box-shadow: none;
 }
-.ttd-image-gallery .owl-nav button.owl-prev:hover,
-.ttd-image-gallery .owl-nav button.owl-next:hover {
-	background: rgba( 0, 0, 0, 0.85 );
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev:hover,
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-next:hover {
+	background: rgba( 0, 0, 0, 0.85 ) !important;
 }
-.ttd-image-gallery .owl-nav button.owl-prev::before,
-.ttd-image-gallery .owl-nav button.owl-next::before {
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev::before,
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-next::before {
 	font-family: Arial, sans-serif;
 	font-size: 28px;
 	line-height: 1;
 	font-weight: 300;
 	display: block;
 }
-.ttd-image-gallery .owl-nav button.owl-prev::before {
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-prev::before {
 	content: "\2039"; /* ‹ */
 	margin-right: 2px;
 }
-.ttd-image-gallery .owl-nav button.owl-next::before {
+.ttd-image-gallery.owl-carousel .owl-nav button.owl-next::before {
 	content: "\203A"; /* › */
 	margin-left: 2px;
 }
-.ttd-image-gallery .owl-nav button.disabled {
-	opacity: 0.3;
+.ttd-image-gallery.owl-carousel .owl-nav button.disabled {
+	opacity: 0.3 !important;
 	cursor: default;
 }
 /* Slight breathing room above the dots so they don't crowd the bottom of the image */
