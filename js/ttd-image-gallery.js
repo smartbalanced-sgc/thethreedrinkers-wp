@@ -101,7 +101,20 @@
 						';margin:0 !important' +
 						';font-size:28px !important' +
 						';line-height:1 !important' +
-						';box-shadow:none !important';
+						';box-shadow:none !important' +
+						// Parent theme uses absolute positioning with negative
+						// left/right offsets to push buttons outside the nav
+						// container. Force them back into the flex flow so
+						// justify-content:space-between on the .owl-nav puts
+						// them where we want.
+						';position:relative !important' +
+						';left:0 !important' +
+						';right:auto !important' +
+						';top:auto !important' +
+						';bottom:auto !important' +
+						';transform:none !important' +
+						';float:none !important' +
+						';flex:0 0 auto !important';
 				} );
 				$wrap.find( '.owl-nav .ttd-arrow-icon' ).each( function () {
 					this.style.cssText +=
