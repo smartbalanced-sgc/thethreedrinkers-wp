@@ -49,3 +49,24 @@
 .ttd-image-gallery .owl-dots {
 	margin-top: 12px;
 }
+
+/*
+ * Hide the theme's featured-image hero on single posts that ALREADY start
+ * with an imported SS gallery — otherwise the post shows the featured
+ * image at the top followed by an identical (or near-identical) carousel
+ * directly below, which looks like a duplicate.
+ *
+ * Why we still set a featured image on these posts: WordPress widgets
+ * (Featured Posts, Trending Posts, Recent Posts sidebar, category archives,
+ * homepage hero, social/OG share image) all use _thumbnail_id. Without
+ * a featured image, those locations render blank tiles. So the featured
+ * image stays in the database — we just suppress its appearance on the
+ * single-post view itself when the carousel makes it redundant.
+ *
+ * Uses CSS :has() — supported in every modern browser since early 2024.
+ */
+.single-post article:has( .entry-content .image-gallery-wrapper ) > section.post-media,
+.single-post article:has( .post-content .image-gallery-wrapper ) > section.post-media {
+	display: none !important;
+}
+
