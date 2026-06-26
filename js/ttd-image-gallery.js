@@ -31,6 +31,14 @@
 
 			$wrap.addClass( 'owl-carousel ttd-image-gallery' );
 
+			// Snapshot the image URLs+alts BEFORE Owl wraps everything in
+			// owl-stage / owl-item / cloned. Used to build the thumbnail
+			// strip below.
+			var thumbData = [];
+			$wrap.children( 'img' ).each( function () {
+				thumbData.push( { src: this.src, alt: this.alt || '' } );
+			} );
+
 			// Owl expects each slide to be a direct child element; the SS
 			// markup is already direct <img> children, but wrapping in <div>
 			// gives us a predictable slide container for CSS / responsive rules.
@@ -125,6 +133,70 @@
 						';line-height:1 !important' +
 						';color:#fff !important';
 				} );
+
+				// ── Thumbnail strip ──────────────────────────────────────
+				// Build a synced thumbnail carousel below the main one (SS
+				// gallery UX). Clicking a thumb navigates the main carousel;
+				// the main carousel highlights the matching thumb as it
+				// changes slides.
+				var thumbCount = thumbData.length;
+				if ( thumbCount > 1 ) {
+					var thumbsHtml = '<div class="ttd-gallery-thumbs owl-carousel">';
+					for ( var i = 0; i < thumbCount; i++ ) {
+						var safeAlt = thumbData[ i ].alt.replace( /"/g, '&quot;' );
+						thumbsHtml +=
+							'<div class="ttd-gallery-thumb" data-slide="' + i + '">' +
+								'<img src="' + thumbData[ i ].src + '" alt="' + safeAlt + '" loading="lazy">' +
+							'</div>';
+					}
+					thumbsHtml += '</div>';
+					var $thumbs = $( thumbsHtml );
+					$wrap.after( $thumbs );
+
+					$thumbs.owlCarousel( {
+						items: 8,
+						margin: 6,
+						dots: false,
+						nav: false,
+						mouseDrag: true,
+						touchDrag: true,
+						smartSpeed: 250,
+						responsive: {
+							0:   { items: 4 },
+							600: { items: 6 },
+							900: { items: 8 }
+						}
+					} );
+
+					// Mark first thumb active on init
+					$thumbs.find( '.ttd-gallery-thumb' ).first().addClass( 'active' );
+
+					// Clicking a thumb navigates the main carousel
+					$thumbs.on( 'click', '.ttd-gallery-thumb', function ( e ) {
+						e.preventDefault();
+						var idx = parseInt( $( this ).attr( 'data-slide' ), 10 );
+						$wrap.trigger( 'to.owl.carousel', [ idx, 300 ] );
+					} );
+
+					// When the main carousel changes, highlight the matching
+					// thumb and scroll the strip so the active thumb is visible.
+					$wrap.on( 'changed.owl.carousel', function ( e ) {
+						var realIdx;
+						if ( e.relatedTarget && typeof e.relatedTarget.relative === 'function' ) {
+							realIdx = e.relatedTarget.relative( e.relatedTarget.current() );
+						} else {
+							realIdx = ( ( e.item.index % thumbCount ) + thumbCount ) % thumbCount;
+						}
+						if ( typeof realIdx !== 'number' || realIdx < 0 ) {
+							return;
+						}
+						$thumbs.find( '.ttd-gallery-thumb' )
+							.removeClass( 'active' )
+							.eq( realIdx )
+							.addClass( 'active' );
+						$thumbs.trigger( 'to.owl.carousel', [ realIdx, 250 ] );
+					} );
+				}
 			} );
 		} );
 	} );

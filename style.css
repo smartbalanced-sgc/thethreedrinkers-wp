@@ -51,6 +51,36 @@
 }
 
 /*
+ * Synced thumbnail strip below the main carousel (Squarespace-style UX).
+ * Each thumbnail is clickable; the active one is highlighted. Owl handles
+ * the strip-scrolling so 10+ image galleries don't crowd the layout.
+ */
+.ttd-gallery-thumbs {
+	margin-top: 10px;
+}
+.ttd-gallery-thumb {
+	cursor: pointer;
+	opacity: 0.55;
+	transition: opacity 0.2s ease, box-shadow 0.2s ease;
+	overflow: hidden;
+	border-radius: 2px;
+}
+.ttd-gallery-thumb img {
+	width: 100%;
+	height: 100%;
+	display: block;
+	aspect-ratio: 16 / 9;
+	object-fit: cover;
+}
+.ttd-gallery-thumb:hover {
+	opacity: 0.85;
+}
+.ttd-gallery-thumb.active {
+	opacity: 1;
+	box-shadow: 0 0 0 2px currentColor;
+}
+
+/*
  * Hide the theme's featured-image hero on single posts that ALREADY start
  * with an imported SS gallery — otherwise the post shows the featured
  * image at the top followed by an identical (or near-identical) carousel
