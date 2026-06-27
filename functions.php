@@ -71,26 +71,6 @@ function ttd_enqueue_image_gallery_carousel() {
 add_action( 'wp_enqueue_scripts', 'ttd_enqueue_image_gallery_carousel', 100 );
 
 /**
- * Enqueue the brand-gold script site-wide.
- *
- * Wraps the word "Drinkers" in the site title with a gold-gradient span
- * (see js/ttd-brand-gold.js). Runs on every front-end page because the site
- * title appears in the header, sticky nav and footer. No jQuery dependency.
- */
-function ttd_enqueue_brand_gold() {
-	if ( is_admin() ) {
-		return;
-	}
-	$rel  = 'js/ttd-brand-gold.js';
-	$path = trailingslashit( get_stylesheet_directory() ) . $rel;
-	$url  = trailingslashit( get_stylesheet_directory_uri() ) . $rel;
-	$ver  = file_exists( $path ) ? filemtime( $path ) : wp_get_theme()->get( 'Version' );
-
-	wp_enqueue_script( 'ttd-brand-gold', $url, array(), $ver, true );
-}
-add_action( 'wp_enqueue_scripts', 'ttd_enqueue_brand_gold', 100 );
-
-/**
  * Suppress the theme's featured-image hero on single posts whose body already
  * starts with that same image.
  *
