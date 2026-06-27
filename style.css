@@ -88,3 +88,22 @@
 	display: none !important;
 }
 
+/*
+ * Mobile site-title sizing.
+ *
+ * The theme's 2.9rem title is far too wide for the narrow centre column on
+ * phones (it sits between the hamburger and search icons) and wraps to two
+ * lines. Cap it at 1.8rem and let it scale down on very narrow handsets via
+ * clamp() so it always stays on one line. Desktop (>767px) is untouched.
+ *
+ * !important is required: the theme prints its title size as inline CSS in
+ * the <head> that loads AFTER this stylesheet, so at equal specificity it
+ * would otherwise win. An !important author rule beats a normal one
+ * regardless of source order.
+ */
+@media ( max-width: 767px ) {
+	.header .site-title {
+		font-size: clamp( 1.4rem, 7.4vw, 1.8rem ) !important;
+	}
+}
+
