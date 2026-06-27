@@ -100,10 +100,17 @@
  * the <head> that loads AFTER this stylesheet, so at equal specificity it
  * would otherwise win. An !important author rule beats a normal one
  * regardless of source order.
+ *
+ * Sizing: the title's centre column (between the hamburger and search icons)
+ * is only ~255px wide on a typical phone. "The Three Drinkers" in Montserrat
+ * 800 needs ~9.4x the font-size in width, so the largest size that fits one
+ * line is ~1.6rem. We cap there and scale down by viewport width via clamp()
+ * so it stays single-line from 320px up. (1.8rem was ~270px wide — just over
+ * the column, which is why it wrapped even though this rule was applying.)
  */
 @media ( max-width: 767px ) {
 	.header .site-title {
-		font-size: clamp( 1.4rem, 7.4vw, 1.8rem ) !important;
+		font-size: clamp( 1rem, 6vw, 1.6rem ) !important;
 	}
 }
 
