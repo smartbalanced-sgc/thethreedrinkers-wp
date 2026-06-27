@@ -91,20 +91,27 @@
 /*
  * Mobile header title sizing.
  *
- * Below ~480px the theme HIDES the big .header title (it computes to 0x0 on
- * phones) and shows the navbar brand — .navbar-brand.site-title at 1.375rem —
- * instead. That is the element phones actually render, and the one we must
- * size. Measured on a 412px viewport: its column is only ~174px wide, but
- * "The Three Drinkers" needs ~196px at 1.375rem, so it wraps to 2–3 lines.
+ * Below ~480px the theme hides the big .header title and shows the navbar
+ * brand (.navbar-brand.site-title) as the header title. The navbar is in
+ * "center" mode and reserves equal side gutters to keep the brand centred, so
+ * the brand's column is only ~173px wide — too narrow for "The Three Drinkers"
+ * (~196px at the theme's 1.375rem), which wrapped to 2–3 lines.
  *
- * Scale the font down by viewport width so it fits one line on phones. The
- * 1.375rem cap means the desktop sticky-nav brand (which has room) is left
- * exactly as the theme intends — only narrow screens shrink.
+ * But search/social are disabled, so those side gutters are just empty space,
+ * and overflow:visible runs all the way up the chain. So rather than shrink
+ * the title to fit the narrow column (which left it looking lost in the
+ * header), we let it grow and spill into the empty gutters on one line,
+ * centred: a fluid size capped at 1.8rem, forced nowrap, centred. Scoped to
+ * <=600px so the desktop sticky-nav brand keeps the theme's own size.
  *
  * !important beats the theme's inline-head navbar CSS, which loads after this
  * stylesheet and would otherwise win at equal specificity.
  */
-.navbar-brand.site-title {
-	font-size: clamp( 0.9rem, 4.4vw, 1.375rem ) !important;
+@media ( max-width: 600px ) {
+	.navbar-brand.site-title {
+		font-size: clamp( 1.2rem, 7vw, 1.8rem ) !important;
+		white-space: nowrap !important;
+		text-align: center !important;
+	}
 }
 
