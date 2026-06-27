@@ -74,7 +74,15 @@
  *      a gallery post created later in the editor). Uses CSS :has(),
  *      supported in every modern browser since early 2024.
  */
-.ttd-hero-suppressed section.post-media,
+.ttd-hero-suppressed section.post-media {
+	display: none !important;
+}
+/*
+ * Carousel fallback, kept in its OWN rule block. If a selector list mixes a
+ * :has() selector with a plain one and the browser doesn't support :has(),
+ * the whole list is invalidated and the plain selector is dropped too. Keeping
+ * these separate guarantees the .ttd-hero-suppressed rule above always applies.
+ */
 .single-post article:has( .entry-content .image-gallery-wrapper ) > section.post-media,
 .single-post article:has( .post-content .image-gallery-wrapper ) > section.post-media {
 	display: none !important;

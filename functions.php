@@ -22,7 +22,12 @@ add_action( 'after_setup_theme', 'csco_setup_child_theme', 99 );
  */
 function csco_child_assets() {
 	if ( ! is_admin() ) {
-		$version = wp_get_theme()->get( 'Version' );
+		// Version-stamp with the file's modification time so every edit to
+		// style.css produces a unique URL and busts browser / server caches.
+		// A fixed version (e.g. the theme's 1.0.0) makes browsers serve a
+		// stale cached stylesheet indefinitely after a deploy.
+		$css_path = get_stylesheet_directory() . '/style.css';
+		$version  = file_exists( $css_path ) ? filemtime( $css_path ) : wp_get_theme()->get( 'Version' );
 		wp_enqueue_style( 'csco_child_css', trailingslashit( get_stylesheet_directory_uri() ) . 'style.css', array(), $version, 'all' );
 	}
 }
