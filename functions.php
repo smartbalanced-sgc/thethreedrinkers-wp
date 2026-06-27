@@ -71,26 +71,6 @@ function ttd_enqueue_image_gallery_carousel() {
 add_action( 'wp_enqueue_scripts', 'ttd_enqueue_image_gallery_carousel', 100 );
 
 /**
- * Enqueue the title-fit script site-wide.
- *
- * Shrinks the header site title just enough to fit one line in its column
- * (see js/ttd-fit-title.js). The header appears on every front-end page.
- * No jQuery dependency.
- */
-function ttd_enqueue_fit_title() {
-	if ( is_admin() ) {
-		return;
-	}
-	$rel  = 'js/ttd-fit-title.js';
-	$path = trailingslashit( get_stylesheet_directory() ) . $rel;
-	$url  = trailingslashit( get_stylesheet_directory_uri() ) . $rel;
-	$ver  = file_exists( $path ) ? filemtime( $path ) : wp_get_theme()->get( 'Version' );
-
-	wp_enqueue_script( 'ttd-fit-title', $url, array(), $ver, true );
-}
-add_action( 'wp_enqueue_scripts', 'ttd_enqueue_fit_title', 100 );
-
-/**
  * Suppress the theme's featured-image hero on single posts whose body already
  * starts with that same image.
  *

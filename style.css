@@ -101,16 +101,13 @@
  * would otherwise win. An !important author rule beats a normal one
  * regardless of source order.
  *
- * Sizing: the title's centre column (between the hamburger and search icons)
- * is only ~255px wide on a typical phone. "The Three Drinkers" in Montserrat
- * 800 needs ~9.4x the font-size in width, so the largest size that fits one
- * line is ~1.6rem. We cap there and scale down by viewport width via clamp()
- * so it stays single-line from 320px up. (1.8rem was ~270px wide — just over
- * the column, which is why it wrapped even though this rule was applying.)
+ * Sizing is fluid, no breakpoint and no JS: capped at the theme's full 2.9rem
+ * on wide screens (where it already fits with room to spare) and scaled down
+ * by viewport width via clamp() only as the screen narrows, so it stays on one
+ * line. This keeps the title full-size wherever there's space and shrinks it
+ * gently on phones — and it renders instantly with no reflow.
  */
-@media ( max-width: 767px ) {
-	.header .site-title {
-		font-size: clamp( 1rem, 6vw, 1.6rem ) !important;
-	}
+.header .site-title {
+	font-size: clamp( 1.4rem, 7vw, 2.9rem ) !important;
 }
 
