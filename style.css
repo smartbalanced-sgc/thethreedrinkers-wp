@@ -89,25 +89,22 @@
 }
 
 /*
- * Mobile site-title sizing.
+ * Mobile header title sizing.
  *
- * The theme's 2.9rem title is far too wide for the narrow centre column on
- * phones (it sits between the hamburger and search icons) and wraps to two
- * lines. Cap it at 1.8rem and let it scale down on very narrow handsets via
- * clamp() so it always stays on one line. Desktop (>767px) is untouched.
+ * Below ~480px the theme HIDES the big .header title (it computes to 0x0 on
+ * phones) and shows the navbar brand — .navbar-brand.site-title at 1.375rem —
+ * instead. That is the element phones actually render, and the one we must
+ * size. Measured on a 412px viewport: its column is only ~174px wide, but
+ * "The Three Drinkers" needs ~196px at 1.375rem, so it wraps to 2–3 lines.
  *
- * !important is required: the theme prints its title size as inline CSS in
- * the <head> that loads AFTER this stylesheet, so at equal specificity it
- * would otherwise win. An !important author rule beats a normal one
- * regardless of source order.
+ * Scale the font down by viewport width so it fits one line on phones. The
+ * 1.375rem cap means the desktop sticky-nav brand (which has room) is left
+ * exactly as the theme intends — only narrow screens shrink.
  *
- * Sizing is fluid, no breakpoint and no JS: capped at the theme's full 2.9rem
- * on wide screens (where it already fits with room to spare) and scaled down
- * by viewport width via clamp() only as the screen narrows, so it stays on one
- * line. This keeps the title full-size wherever there's space and shrinks it
- * gently on phones — and it renders instantly with no reflow.
+ * !important beats the theme's inline-head navbar CSS, which loads after this
+ * stylesheet and would otherwise win at equal specificity.
  */
-.header .site-title {
-	font-size: clamp( 1.05rem, 5.5vw, 2.9rem ) !important;
+.navbar-brand.site-title {
+	font-size: clamp( 0.9rem, 4.4vw, 1.375rem ) !important;
 }
 
