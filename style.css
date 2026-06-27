@@ -115,3 +115,20 @@
 	}
 }
 
+/*
+ * Homepage hero carousel title.
+ *
+ * The theme renders the hero/overlay post title at the H1 heading size (3rem),
+ * which is fine on desktop but far too large on a phone — it swallows the hero
+ * image and wraps to many lines. Scale it fluidly with the viewport, capped at
+ * the theme's own 3rem so wide screens are unchanged (desktop = exactly what
+ * the Customizer's Heading 1 sets). At ~412px this resolves to ~1.8rem.
+ *
+ * Scoped to .home .owl-carousel .overlay-inner so it affects ONLY the homepage
+ * hero carousel — not single-post H1s, archives, or other overlay blocks.
+ */
+.home .owl-carousel .overlay-inner .entry-title,
+.home .owl-carousel .overlay-inner .entry-title a {
+	font-size: clamp( 1.6rem, 7vw, 3rem ) !important;
+}
+
