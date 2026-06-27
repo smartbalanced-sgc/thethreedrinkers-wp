@@ -108,6 +108,6 @@
  * gently on phones — and it renders instantly with no reflow.
  */
 .header .site-title {
-	font-size: clamp( 1.4rem, 7vw, 2.9rem ) !important;
+	font-size: clamp( 1.05rem, 5.5vw, 2.9rem ) !important;
 }
 
