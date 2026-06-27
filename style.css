@@ -132,3 +132,44 @@
 	font-size: clamp( 1.6rem, 7vw, 3rem ) !important;
 }
 
+/*
+ * Mobile only: remove the gap between the header and the homepage hero
+ * carousel. The hero block carries a 40px padding-top (which pushes the
+ * carousel down from the navbar); on phones we want the carousel to sit
+ * directly under the header bar. Desktop keeps the spacing.
+ */
+@media ( max-width: 767px ) {
+	.home [class*="cnvs-block-featured-posts"] {
+		padding-top: 0 !important;
+	}
+}
+
+/*
+ * Homepage hero carousel — uniform slide height.
+ *
+ * The theme uses Owl's autoHeight, so each slide sizes to its own content and
+ * the carousel jumps height as it rotates (measured slides ranged 227–425px).
+ * Lock every slide (and the stage) to one fixed height; the parallax overlay
+ * image already covers the box, and the title stays vertically centred via the
+ * theme's existing flex on .overlay-outer.
+ *
+ * Heights: desktop 560px, mobile 440px (a fixed 440 would look letterboxed on
+ * wide screens, so desktop gets a taller band — both consistent across slides).
+ */
+.cs-block-section-slider .owl-stage-outer,
+.cs-block-section-slider .owl-item,
+.cs-block-section-slider .post-outer.overlay,
+.cs-block-section-slider .overlay-outer {
+	height: 560px !important;
+	min-height: 560px !important;
+}
+@media ( max-width: 767px ) {
+	.cs-block-section-slider .owl-stage-outer,
+	.cs-block-section-slider .owl-item,
+	.cs-block-section-slider .post-outer.overlay,
+	.cs-block-section-slider .overlay-outer {
+		height: 440px !important;
+		min-height: 440px !important;
+	}
+}
+
