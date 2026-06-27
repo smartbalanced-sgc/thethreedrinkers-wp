@@ -88,3 +88,35 @@
 	display: none !important;
 }
 
+/*
+ * ── Site title ───────────────────────────────────────────────────────────
+ *
+ * 1. Gold accent on the word "Drinkers" (all devices, everywhere the site
+ *    title appears — header, sticky nav, footer). ttd-brand-gold.js wraps
+ *    the word in <span class="ttd-gold-word">; we paint it with a metallic
+ *    gradient clipped to the text. A bright highlight band through a deeper
+ *    gold is what makes it read as real, shiny gold rather than flat brown.
+ *    The solid `color` is a fallback for the rare browser without
+ *    background-clip:text.
+ */
+.ttd-gold-word {
+	color: #D4AF37;
+	background: linear-gradient( 180deg, #F5E08B 0%, #D4AF37 35%, #A87C1B 55%, #F0D87A 70%, #9C6F16 100% );
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/*
+ * 2. Mobile sizing. The theme's 2.9rem title is far too wide for the narrow
+ *    centre column on phones (it sits between the hamburger and search
+ *    icons) and wraps to two lines. Cap it at 1.8rem and let it scale down
+ *    on very narrow handsets via clamp() so it always stays on one line.
+ *    Desktop (>767px) keeps the theme default untouched.
+ */
+@media ( max-width: 767px ) {
+	.header .site-title {
+		font-size: clamp( 1.4rem, 7.4vw, 1.8rem );
+	}
+}
+
