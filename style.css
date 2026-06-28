@@ -203,3 +203,25 @@
 	}
 }
 
+/*
+ * Grid post cards — bordered "card" style (Uncrate-like).
+ *
+ * Card markup: article.post-grid (20px horizontal column gutter) > .post-outer
+ * > [.post-inner = image, .post-inner = text]. The border goes on .post-outer
+ * (inside the gutter) so cards are separate and spaced. The image stays flush
+ * to the top/sides; the text .post-inner is inset with padding.
+ *
+ * height:100% makes the bordered box fill the grid row's height so both cards
+ * in a row match. The Grid layout already stretches the article items to equal
+ * height per row, so a shorter card simply gets white space below its text
+ * inside the border instead of a stunted box.
+ */
+.post-grid .post-outer {
+	border: 1px solid #e5e5e5 !important;
+	height: 100% !important;
+}
+.post-grid .post-inner:has( .entry-title ) {
+	margin-top: 0 !important;
+	padding: 24px !important;
+}
+
