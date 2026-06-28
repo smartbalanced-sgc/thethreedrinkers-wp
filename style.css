@@ -189,3 +189,17 @@
 	justify-content: flex-start !important;
 }
 
+/*
+ * Hide the off-canvas hamburger toggle on desktop, where the inline primary
+ * menu is already shown (it's redundant there). Kept on mobile (<970px) where
+ * it's the only way to reach the menu. 970px matches the theme's desktop
+ * breakpoint, so the hamburger disappears exactly as the inline menu appears —
+ * no width with neither. Scoped to .navbar-primary so the off-canvas CLOSE
+ * button (same classes, but inside .offcanvas) is unaffected.
+ */
+@media ( min-width: 970px ) {
+	.navbar-primary .offcanvas-toggle {
+		display: none !important;
+	}
+}
+
