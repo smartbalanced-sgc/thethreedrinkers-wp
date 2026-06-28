@@ -173,3 +173,19 @@
 	}
 }
 
+/*
+ * Off-canvas (slide-out) menu: hide the site title at the top so only the menu
+ * items show, and flush the close (X) button to the left.
+ *
+ * The off-canvas header is a flex row: [brand "The Three Drinkers" | X]. Hiding
+ * the brand and forcing justify-content:flex-start on the nav drops the X to
+ * the left edge. Scoped to .navbar-offcanvas so only the slide-out menu's brand
+ * is hidden — the main header title is untouched.
+ */
+.navbar-offcanvas .navbar-brand {
+	display: none !important;
+}
+.navbar-offcanvas {
+	justify-content: flex-start !important;
+}
+
